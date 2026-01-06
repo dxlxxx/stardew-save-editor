@@ -256,12 +256,43 @@ export function migrateHost(saveData, farmhandIndex) {
     // 6. 将当前主机降级为农场工人
     gameSave.farmhands.Farmer[farmhandIndex] = currentHost
     
-    // 5. 将目标农场工人提升为主机
+    // 7. 将目标农场工人提升为主机
     gameSave.player = targetFarmhand
+
+    // 8. 替换farmhandReference中的ID
+    // farmhandReference应该指向农场工人，所以需要用原主机ID替换新主机ID
+    const oldHostId = currentHost.UniqueMultiplayerID
+    const newHostId = targetFarmhand.UniqueMultiplayerID
+    
+    console.log('替换farmhandReference中的ID...')
+    let replacementCount = 0
+    
+    // 递归遍历并替换farmhandReference
+    function traverseAndReplace(obj) {
+      if (!obj || typeof obj !== 'object') return
+      
+      if (Array.isArray(obj)) {
+        obj.forEach(item => traverseAndReplace(item))
+      } else {
+        for (const key in obj) {
+          if (key === 'farmhandReference') {
+            if (obj[key] === newHostId) {
+              obj[key] = oldHostId
+              replacementCount++
+            }
+          } else if (obj[key] && typeof obj[key] === 'object') {
+            traverseAndReplace(obj[key])
+          }
+        }
+      }
+    }
+    
+    traverseAndReplace(gameSave)
 
     console.log('主机迁移成功:', {
       oldHost: currentHost.name,
-      newHost: targetFarmhand.name
+      newHost: targetFarmhand.name,
+      farmhandReferencesReplaced: replacementCount
     })
 
     return newSaveData
@@ -299,5 +330,52 @@ export function updateSaveGameInfo(saveInfoData, newHostFarmer) {
     return newSaveInfoData
   } catch (error) {
     throw new Error(`SaveGameInfo更新失败: ${error.message}`)
+  }
+}
+
+/**
+ * 替换farmhandReference中的UniqueMultiplayerID
+ * farmhandReference应指向农场工人，所以需要用原主机ID替换新主机ID
+ * @param {object} saveData - 存档数据
+ * @param {string} oldHostId - 原主机ID（现在是农场工人）
+ * @param {string} newHostId - 新主机ID
+ * @returns {object} 修改后的存档数据
+ */
+export function replaceFarmhandReferences(saveData, oldHostId, newHostId) {
+  try {
+    const newSaveData = JSON.parse(JSON.stringify(saveData)) // 深拷贝
+    const gameSave = newSaveData.SaveGame
+    
+    let replacementCount = 0
+    
+    // 递归遍历并替换farmhandReference
+    function traverseAndReplace(obj) {
+      if (!obj || typeof obj !== 'object') return
+      
+      if (Array.isArray(obj)) {
+        obj.forEach(item => traverseAndReplace(item))
+      } else {
+        for (const key in obj) {
+          if (key === 'farmhandReference') {
+            // 检查farmhandReference值是否为新主机ID
+            if (obj[key] === newHostId) {
+              console.log(`  找到farmhandReference: ${newHostId}，替换为: ${oldHostId}`)
+              obj[key] = oldHostId
+              replacementCount++
+            }
+          } else if (obj[key] && typeof obj[key] === 'object') {
+            traverseAndReplace(obj[key])
+          }
+        }
+      }
+    }
+    
+    traverseAndReplace(gameSave)
+    
+    console.log(`farmhandReference替换完成，总共替换了 ${replacementCount} 个`)
+    
+    return newSaveData
+  } catch (error) {
+    throw new Error(`替换farmhandReference失败: ${error.message}`)
   }
 }

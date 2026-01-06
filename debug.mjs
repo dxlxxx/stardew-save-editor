@@ -1,5 +1,11 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { XMLParser, XMLBuilder } from 'fast-xml-parser'
+import { 
+  extractPlayersInfo, 
+  migrateHost, 
+  updateSaveGameInfo,
+  fixNullableFields 
+} from './src/utils/xmlParser.js'
 
 // XML 解析器配置
 const parserOptions = {
@@ -36,165 +42,10 @@ function buildXML(data) {
   return builder.build(data)
 }
 
-// 修复XML中的空可空字段（需要 xsi:nil="true"）
-function fixNullableFields(xmlContent) {
-  // 已知需要 xsi:nil="true" 的可空字段列表
-  const nullableFields = [
-    'datingFarmer',
-    'divorcedFromFarmer',
-    'loveInterest',
-    'endOfRouteBehaviorName',
-    'isBigCraftable',
-    'which',
-    'catPerson',
-    'canUnderstandDwarves',
-    'hasClubCard',
-    'hasDarkTalisman',
-    'hasMagicInk',
-    'hasMagnifyingGlass',
-    'hasRustyKey',
-    'hasSkullKey',
-    'hasSpecialCharm',
-    'HasTownKey',
-    'hasUnlockedSkullDoor',
-    'daysMarried',
-    'isMale',
-    'averageBedtime',
-    'beveragesMade',
-    'caveCarrotsFound',
-    'cheeseMade',
-    'chickenEggsLayed',
-    'copperFound',
-    'cowMilkProduced',
-    'cropsShipped',
-    'daysPlayed',
-    'diamondsFound',
-    'dirtHoed',
-    'duckEggsLayed',
-    'fishCaught',
-    'geodesCracked',
-    'giftsGiven',
-    'goatCheeseMade',
-    'goatMilkProduced',
-    'goldFound',
-    'goodFriends',
-    'individualMoneyEarned',
-    'iridiumFound',
-    'ironFound',
-    'itemsCooked',
-    'itemsCrafted',
-    'itemsForaged',
-    'itemsShipped',
-    'monstersKilled',
-    'mysticStonesCrushed',
-    'notesFound',
-    'otherPreciousGemsFound',
-    'piecesOfTrashRecycled',
-    'preservesMade',
-    'prismaticShardsFound',
-    'questsCompleted',
-    'rabbitWoolProduced',
-    'rocksCrushed',
-    'sheepWoolProduced',
-    'slimesKilled',
-    'stepsTaken',
-    'stoneGathered',
-    'stumpsChopped',
-    'timesFished',
-    'timesUnconscious',
-    'totalMoneyGifted',
-    'trufflesFound',
-    'weedsEliminated',
-    'seedsSown'
-  ]
-  
-  let fixedXml = xmlContent
-  
-  // 为每个可空字段替换空标签
-  for (const field of nullableFields) {
-    // 匹配 <field></field> 或 <field />（没有属性的自闭合标签）
-    const emptyTagPattern = new RegExp(`<${field}\\s*></${field}>|<${field}\\s*/>`, 'g')
-    fixedXml = fixedXml.replace(emptyTagPattern, `<${field} xsi:nil="true" />`)
-  }
-  
-  return fixedXml
-}
-
-// 提取玩家信息
-function extractPlayersInfo(saveData) {
-  const gameSave = saveData.SaveGame
-  
-  // 主机玩家
-  const hostPlayer = gameSave.player
-  const hostInfo = {
-    name: hostPlayer?.name,
-    farmName: hostPlayer?.farmName,
-    id: hostPlayer?.UniqueMultiplayerID,
-    money: hostPlayer?.money
-  }
-  
-  // 农场工人
-  const farmhands = []
-  const farmhandsData = gameSave.farmhands?.Farmer
-  
-  if (farmhandsData) {
-    const farmhandArray = Array.isArray(farmhandsData) ? farmhandsData : [farmhandsData]
-    
-    farmhandArray.forEach((farmhand, index) => {
-      if (farmhand && farmhand.name && typeof farmhand.name === 'string') {
-        farmhands.push({
-          index,
-          name: farmhand?.name,
-          farmName: farmhand?.farmName,
-          id: farmhand?.UniqueMultiplayerID,
-          money: farmhand?.money
-        })
-      }
-    })
-  }
-  
-  return { host: hostInfo, farmhands }
-}
-
-// 迁移SaveGameInfo - SaveGameInfo只包含一个Farmer节点，代表当前主机
-function migrateSaveInfo(saveInfoData, newHostFarmer) {
-  console.log('\n=== SaveGameInfo替换 ===')
-  console.log('旧主机:', saveInfoData.Farmer.name)
-  console.log('新主机:', newHostFarmer.name)
-  
-  // 直接替换整个Farmer节点
-  saveInfoData.Farmer = JSON.parse(JSON.stringify(newHostFarmer))
-  
-  // 确保保留命名空间属性
-  if (!saveInfoData.Farmer['@_xmlns:xsi']) {
-    saveInfoData.Farmer['@_xmlns:xsi'] = 'http://www.w3.org/2001/XMLSchema-instance'
-  }
-  if (!saveInfoData.Farmer['@_xmlns:xsd']) {
-    saveInfoData.Farmer['@_xmlns:xsd'] = 'http://www.w3.org/2001/XMLSchema'
-  }
-  
-  console.log('替换完成！SaveGameInfo现在显示:', saveInfoData.Farmer.name)
-  console.log('=======================\n')
-  
-  return saveInfoData
-}
-
-// 迁移主机
-function migrateHost(saveData, farmhandIndex) {
-  const gameSave = saveData.SaveGame
-  
-  // 获取数据
-  const currentHost = gameSave.player
-  const farmhandsArray = gameSave.farmhands.Farmer
-  const targetFarmhand = farmhandsArray[farmhandIndex]
-  
-  if (!targetFarmhand) {
-    throw new Error(`找不到索引为 ${farmhandIndex} 的农场工人`)
-  }
-  
+function displayMigrationInfo(currentHost, targetFarmhand) {
   console.log('\n=== 开始交换 ===')
-  console.log('当前主机:', currentHost.name)
-  console.log('目标工人:', targetFarmhand.name)
+  console.log('当前主机:', currentHost.name, '(ID:', currentHost.UniqueMultiplayerID, ')')
+  console.log('目标工人:', targetFarmhand.name, '(ID:', targetFarmhand.UniqueMultiplayerID, ')')
   
   // 同步时间（如果工人很久没上线，更新为主机的最新时间）
   targetFarmhand.dayOfMonthForSaveGame = currentHost.dayOfMonthForSaveGame
@@ -248,19 +99,20 @@ function migrateHost(saveData, farmhandIndex) {
   return saveData
 }
 
-function displayPlayers(players) {
+function displayPlayers(playersInfo) {
   console.log('\n=== 玩家列表 ===')
-  console.log(`\n[主机] ${players.host.name}`)
-  console.log(`  农场: ${players.host.farmName}`)
-  console.log(`  ID: ${players.host.id}`)
-  console.log(`  金钱: ${players.host.money}`)
+  const host = playersInfo.host
+  console.log(`\n[主机] ${host.name}`)
+  console.log(`  农场: ${host.farmName}`)
+  console.log(`  ID: ${host.uniqueMultiplayerID}`)
+  console.log(`  金钱: ${host.money}`)
   
-  if (players.farmhands.length > 0) {
+  if (playersInfo.farmhands.length > 0) {
     console.log('\n农场工人:')
-    players.farmhands.forEach((farmhand) => {
+    playersInfo.farmhands.forEach((farmhand) => {
       console.log(`\n[${farmhand.index}] ${farmhand.name}`)
       console.log(`  农场: ${farmhand.farmName}`)
-      console.log(`  ID: ${farmhand.id}`)
+      console.log(`  ID: ${farmhand.uniqueMultiplayerID}`)
       console.log(`  金钱: ${farmhand.money}`)
     })
   } else {
@@ -315,11 +167,15 @@ function main() {
     // 5. 执行迁移
     console.log('\n[5/6] 执行主机迁移...')
     console.log('将主机迁移给农场工人:', players.farmhands[targetFarmhandIndex].name)
+    
+    // 5. 执行迁移（包含farmhandReference替换）
+    console.log('\n[5/6] 执行主机迁移...')
+    console.log('将主机迁移给农场工人:', players.farmhands[targetFarmhandIndex].name)
     const modifiedData = migrateHost(saveData, targetFarmhandIndex)
     
     // 提取新主机的Farmer数据用于SaveGameInfo
     const newHostFarmer = modifiedData.SaveGame.player
-    const modifiedSaveInfoData = migrateSaveInfo(saveInfoData, newHostFarmer)
+    const modifiedSaveInfoData = updateSaveGameInfo(saveInfoData, newHostFarmer)
     
     // 6. 生成新的 XML
     console.log('\n[6/6] 生成新的存档文件...')
