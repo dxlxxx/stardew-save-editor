@@ -1,112 +1,135 @@
-<template>
+﻿<template>
   <div class="player-list">
-    <el-card v-if="playersInfo">
-      <template #header>
-        <div class="card-header">
-          <el-icon><User /></el-icon>
-          <span>存档信息</span>
+    <div v-if="playersInfo" class="stardew-panel">
+      <div class="stardew-header">{{ playersInfo.host.farmName }}农场</div>
+
+      <div class="stardew-row stardew-row--host">
+        <div class="avatar-slot">
+          <img class="avatar-icon" :src="playerIcon" alt="player" />
         </div>
-      </template>
-
-      <!-- 农场信息 -->
-      <el-descriptions :column="2" border class="farm-info">
-        <el-descriptions-item label="农场名称">
-          {{ playersInfo.host.farmName }}
-        </el-descriptions-item>
-        <el-descriptions-item label="玩家总数">
-          {{ playersInfo.allPlayers.length }}
-        </el-descriptions-item>
-      </el-descriptions>
-
-      <!-- 当前主机 -->
-      <div class="section-title">
-        <el-icon><Star /></el-icon>
-        <span>当前主机</span>
+        <div class="row-main">
+          <div class="row-title">
+            <strong>{{ playersInfo.host.name }}</strong>
+            <span class="role-tag">主机</span>
+          </div>
+          <div class="row-sub">
+            第 {{ playersInfo.host.yearForSaveGame }} 年 {{ formatSeason(playersInfo.host.seasonForSaveGame) }} {{ playersInfo.host.dayOfMonthForSaveGame }} 日
+          </div>
+        </div>
+        <div class="row-meta">
+          <div class="meta-item">
+            <img class="meta-icon" :src="goldIcon" alt="gold" />
+            <span class="meta-value">{{ formatMoney(playersInfo.host.money) }}</span>
+            <img class="meta-icon" :src="timeIcon" alt="time" />
+            <span class="meta-value">{{ formatPlayedTime(playersInfo.host.millisecondsPlayed) }}</span>
+          </div>
+        </div>
       </div>
-      <el-card class="player-card host-card" shadow="hover">
-        <div class="player-info">
-          <div class="player-avatar">
-            <el-icon size="32"><User /></el-icon>
-          </div>
-          <div class="player-details">
-            <div class="player-name">
-              <strong>{{ playersInfo.host.name }}</strong>
-              <el-tag type="warning" size="small">主机</el-tag>
-            </div>
-            <div class="player-stats">
-              <span>💰 金钱: {{ formatMoney(playersInfo.host.money) }}</span>
-              <span class="divider">|</span>
-              <span>ID: {{ playersInfo.host.uniqueMultiplayerID }}</span>
-            </div>
-          </div>
-        </div>
-      </el-card>
 
-      <!-- 农场工人列表 -->
-      <div v-if="playersInfo.farmhands.length > 0">
-        <div class="section-title">
-          <el-icon><Avatar /></el-icon>
-          <span>农场工人</span>
+      <div
+        v-for="(farmhand, index) in playersInfo.farmhands"
+        :key="index"
+        class="stardew-row"
+      >
+        <div class="avatar-slot">
+          <img class="avatar-icon" :src="playerIcon" alt="player" />
         </div>
-        
-        <el-card 
-          v-for="(farmhand, index) in playersInfo.farmhands" 
-          :key="index"
-          class="player-card farmhand-card"
-          shadow="hover"
-        >
-          <div class="player-info">
-            <div class="player-avatar">
-              <el-icon size="28"><User /></el-icon>
-            </div>
-            <div class="player-details">
-              <div class="player-name">
-                <strong>{{ farmhand.name }}</strong>
-                <el-tag type="info" size="small">工人</el-tag>
-              </div>
-              <div class="player-stats">
-                <span>💰 金钱: {{ formatMoney(farmhand.money) }}</span>
-                <span class="divider">|</span>
-                <span>ID: {{ farmhand.uniqueMultiplayerID }}</span>
-              </div>
-            </div>
-            <div class="player-actions">
-              <el-button 
-                type="primary" 
+        <div class="row-main">
+          <div class="row-title">
+            <strong>{{ farmhand.name }}</strong>
+            <span class="role-tag role-tag--worker">玩家</span>
+          </div>
+          <div class="row-sub">第 {{ playersInfo.host.yearForSaveGame }} 年 {{ formatSeason(playersInfo.host.seasonForSaveGame) }} {{ playersInfo.host.dayOfMonthForSaveGame }} 日</div>
+        </div>
+        <div class="row-meta">
+          <div class="meta-item">
+            <img class="meta-icon" :src="goldIcon" alt="gold" />
+            <span class="meta-value">{{ formatMoney(farmhand.money) }}</span>
+            <img class="meta-icon" :src="timeIcon" alt="time" />
+            <span class="meta-value">{{ formatPlayedTime(farmhand.millisecondsPlayed) }}</span>
+          </div>
+          <el-tooltip
+            :disabled="canInteract"
+            :content="lockMessage || '主存档文件或SaveGameInfo还没上传'"
+            effect="light"
+            placement="top"
+            popper-class="locked-tip"
+          >
+            <span class="button-wrap">
+              <el-button
+                class="stardew-button"
+                type="primary"
                 size="small"
-                @click="$emit('migrate-host', index)"
+                :disabled="!canInteract"
+                @click="handleMigrate(index)"
               >
                 设为主机
               </el-button>
-            </div>
-          </div>
-        </el-card>
+            </span>
+          </el-tooltip>
+        </div>
       </div>
 
-      <el-empty 
-        v-else 
-        description="没有农场工人，无法执行主机迁移"
-        :image-size="100"
-      />
-    </el-card>
+      <div v-if="playersInfo.farmhands.length === 0" class="stardew-empty">
+        没有农场工人，无法执行主机迁移
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { User, Star, Avatar } from '@element-plus/icons-vue'
+import goldIcon from '../assets/image/Gold.png'
+import timeIcon from '../assets/image/Time_Icon.png'
+import playerIcon from '../assets/image/The_Player_Icon.png'
 
-defineProps({
+const props = defineProps({
   playersInfo: {
     type: Object,
     default: null
+  },
+  canInteract: {
+    type: Boolean,
+    default: false
+  },
+  lockMessage: {
+    type: String,
+    default: ''
   }
+  
 })
 
-defineEmits(['migrate-host'])
+const emit = defineEmits(['migrate-host'])
 
 const formatMoney = (money) => {
   return parseInt(money || 0).toLocaleString('zh-CN')
 }
+
+
+const formatSeason = (season) => {
+  const map = {
+    0: '春季',
+    1: '夏季',
+    2: '秋季',
+    3: '冬季'
+  }
+  return map[season] || season || ''
+}
+
+const formatPlayedTime = (milliseconds) => {
+  if (!milliseconds || isNaN(milliseconds)) return '0 小时'
+  const totalSeconds = Math.floor(milliseconds / 1000)
+  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0')
+  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0')
+  return `${hours}:${minutes} `
+}
+
+
+const handleMigrate = (index) => {
+  if (!props.canInteract) return
+  emit('migrate-host', index)
+}
+
+
 </script>
 
 <style scoped>
@@ -114,83 +137,123 @@ const formatMoney = (money) => {
   margin-top: 20px;
 }
 
-.card-header {
+.stardew-panel {
+  background: #f8d79a;
+  border: 3px solid #8c4a1f;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px #e7b676;
+  overflow: hidden;
+}
+
+.stardew-header {
+  text-align: center;
+  padding: 18px 16px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #6b2f12;
+  border-bottom: 3px solid #8c4a1f;
+  background: #f3c778;
+}
+
+.stardew-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 16px;
+  padding: 16px;
+  border-top: 2px solid #e1ad62;
+  background: #f8d79a;
 }
 
-.farm-info {
-  margin-bottom: 24px;
+.stardew-row--host {
+  border-top: none;
 }
 
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 20px 0 12px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.player-card {
-  margin-bottom: 12px;
-}
-
-.host-card {
-  background: linear-gradient(135deg, #fff9e6 0%, #ffffff 100%);
-  border: 2px solid #e6a23c;
-}
-
-.farmhand-card {
-  border: 1px solid #dcdfe6;
-}
-
-.player-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.player-avatar {
+.avatar-slot {
+  width: 72px;
+  height: 72px;
+  border: 2px solid #9a5a2a;
+  background: #f3c778;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
-  background: #f0f2f5;
-  border-radius: 50%;
-  color: #409eff;
 }
 
-.player-details {
+.avatar-icon {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.row-main {
   flex: 1;
+  padding: 0 16px;
 }
 
-.player-name {
+.row-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 10px;
   font-size: 16px;
+  color: #6b2f12;
+  margin-bottom: 6px;
 }
 
-.player-stats {
+.row-sub {
+  color: #7c4a1f;
+  font-size: 14px;
+}
+
+.row-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #606266;
+  gap: 12px;
+  color: #6b2f12;
+  font-weight: 600;
 }
 
-.divider {
-  color: #dcdfe6;
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.player-actions {
-  margin-left: auto;
+.meta-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.meta-value {
+  font-size: 15px;
+}
+
+.role-tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #f4e3a3;
+  border: 1px solid #c7913f;
+  font-size: 12px;
+  color: #6b2f12;
+}
+
+.role-tag--worker {
+  background: #f1d7a1;
+}
+
+.stardew-button {
+  background: #c7832d;
+  border-color: #9a5a2a;
+}
+
+.stardew-empty {
+  padding: 18px;
+  text-align: center;
+  color: #7c4a1f;
+  border-top: 2px solid #e1ad62;
+}
+
+.button-wrap {
+  display: inline-block;
 }
 </style>

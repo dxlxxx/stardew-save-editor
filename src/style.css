@@ -26,3 +26,28 @@ body {
   width: 100%;
   min-height: 100vh;
 }
+
+.loading-mask {
+  position: absolute;
+  inset: 0;
+  background: #fff6d4e7;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.loading-mask__img {
+  width: 80%;
+  height: auto;
+  max-width: 80%;
+  max-height: 80%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.locked-tip {
+  background-color: #fef0f0;
+  color: #f56c6c;
+  border: 1px solid #fbc4c4;
+}

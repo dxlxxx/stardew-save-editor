@@ -14,25 +14,39 @@
       </div>
       <template #tip>
         <div class="el-upload__tip">
-          <p style="font-size: 13px; color: #909399; margin: 8px 0 0 0;">
+
+          <P v-if="fileName" >已上传文件：<span class="file-name" style="font-weight: bold;">{{ fileName }}</span></P>
+
+          <p
+            v-if="errorMessage"
+            class="upload-tip upload-tip--error"
+          >
+            {{ errorMessage }}
+          </p>
+
+          <p
+            v-else-if="!fileName"
+            class="upload-tip"
+            :class="tipClass"
+          >
             {{ tipText }}
+          </p>
+          <p
+            v-else-if="fileName && status === 'success'"
+            class="upload-tip"
+            :class="tipClass"
+          >
+            已成功加载文件：{{ fileName }}
           </p>
         </div>
       </template>
     </el-upload>
 
-    <div v-if="fileName" class="file-info">
-      <el-tag type="success" size="large">
-        <el-icon><Document /></el-icon>
-        已选择：{{ fileName }}
-      </el-tag>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Upload, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import uploadIcon from '../assets/image/upload.png'
 
@@ -40,6 +54,14 @@ const props = defineProps({
   acceptText: {
     type: String,
     default: '存档'
+  },
+  status: {
+    type: String,
+    default: 'idle'
+  },
+  errorMessage: {
+    type: String,
+    default: ''
   }
 })
 
@@ -51,6 +73,12 @@ const tipText = computed(() => {
     return '上传SaveGameInfo文件'
   }
   return '上传主存档文件（如：YourName_123456789）'
+})
+
+const tipClass = computed(() => {
+  if (props.status === 'error') return 'upload-tip--error'
+  if (props.status === 'success') return 'upload-tip--success'
+  return 'upload-tip--warning'
 })
 
 const handleFileChange = (uploadFile) => {
@@ -118,18 +146,22 @@ const handleFileChange = (uploadFile) => {
   margin-top: 16px;
 }
 
-.el-upload__tip p {
+.upload-tip {
   margin: 4px 0;
   font-size: 13px;
+  color: #909399;
 }
 
-.file-info {
-  margin-top: 20px;
-  text-align: center;
+.upload-tip--warning {
+  color: #e6a23c;
 }
 
-.file-info .el-tag {
-  padding: 12px 20px;
-  font-size: 14px;
+.upload-tip--error {
+  color: #f56c6c;
 }
+
+.upload-tip--success {
+  color: #67c23a;
+}
+
 </style>

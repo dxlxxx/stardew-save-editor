@@ -4,7 +4,9 @@ import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import App from './App.vue'
 import './style.css'
+import loadingMask from './directives/loadingMask'
 
 const app = createApp(App)
 app.use(ElementPlus)
+app.directive('loading-mask', loadingMask)
 app.mount('#app')

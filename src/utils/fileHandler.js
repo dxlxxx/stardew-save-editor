@@ -1,9 +1,13 @@
-import { saveAs } from 'file-saver'
+import { saveAs } from "file-saver";
 
 // 检测是否在Electron环境
 const isElectron = () => {
-  return typeof window !== 'undefined' && window.electronAPI && window.electronAPI.isElectron
-}
+  return (
+    typeof window !== "undefined" &&
+    window.electronAPI &&
+    window.electronAPI.isElectron
+  );
+};
 
 /**
  * 读取文件内容为文本
@@ -12,11 +16,11 @@ const isElectron = () => {
  */
 export function readFileAsText(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => resolve(e.target.result)
-    reader.onerror = (e) => reject(new Error('文件读取失败'))
-    reader.readAsText(file, 'UTF-8')
-  })
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = (e) => reject(new Error("文件读取失败"));
+    reader.readAsText(file, "UTF-8");
+  });
 }
 
 /**
@@ -29,27 +33,30 @@ export async function exportSaveFile(content, fileName) {
     // Electron环境：使用原生文件对话框保存
     if (isElectron()) {
       const result = await window.electronAPI.saveFileDialog(fileName, [
-        { name: '所有文件', extensions: ['*'] }
-      ])
-      
+        { name: "所有文件", extensions: ["*"] },
+      ]);
+
       if (result.canceled) {
-        throw new Error('用户取消了保存')
+        throw new Error("用户取消了保存");
       }
-      
-      const saveResult = await window.electronAPI.saveFile(result.filePath, content)
-      
+
+      const saveResult = await window.electronAPI.saveFile(
+        result.filePath,
+        content
+      );
+
       if (!saveResult.success) {
-        throw new Error(saveResult.error)
+        throw new Error(saveResult.error);
       }
-      
-      return
+
+      return;
     }
-    
+
     // 浏览器环境：使用file-saver下载
-    const blob = new Blob([content], { type: 'application/octet-stream' })
-    saveAs(blob, fileName)
+    const blob = new Blob([content], { type: "application/octet-stream" });
+    saveAs(blob, fileName);
   } catch (error) {
-    throw new Error(`文件导出失败: ${error.message}`)
+    throw new Error(`文件导出失败: ${error.message}`);
   }
 }
 
@@ -58,7 +65,7 @@ export async function exportSaveFile(content, fileName) {
  * @returns {string} 'electron' 或 'browser'
  */
 export function getEnvironment() {
-  return isElectron() ? 'electron' : 'browser'
+  return isElectron() ? "electron" : "browser";
 }
 
 /**
@@ -69,10 +76,10 @@ export function getEnvironment() {
 export function validateSaveFile(xmlContent) {
   // 只检查是否为有效的XML格式（包含<?xml标签或有<开头）
   if (!xmlContent || xmlContent.trim().length === 0) {
-    return false
+    return false;
   }
-  const trimmed = xmlContent.trim()
-  return trimmed.startsWith('<?xml') || trimmed.startsWith('<')
+  const trimmed = xmlContent.trim();
+  return trimmed.startsWith("<?xml") || trimmed.startsWith("<");
 }
 
 /**
@@ -82,7 +89,7 @@ export function validateSaveFile(xmlContent) {
  */
 export function validateSaveGameInfo(xmlContent) {
   // SaveGameInfo文件只包含一个Farmer节点
-  return xmlContent.includes('<Farmer') && xmlContent.includes('<name>')
+  return xmlContent.includes("<Farmer") && xmlContent.includes("<name>");
 }
 
 /**
@@ -92,86 +99,92 @@ export function validateSaveGameInfo(xmlContent) {
  */
 export async function loadSaveFromDirectory(dirPath) {
   if (!isElectron()) {
-    throw new Error('此功能仅在Electron环境中可用')
+    throw new Error("此功能仅在Electron环境中可用");
   }
-  
+
   try {
     // 读取目录内容
-    const result = await window.electronAPI.readDirectory(dirPath)
+    const result = await window.electronAPI.readDirectory(dirPath);
     if (!result.success) {
-      throw new Error(result.error)
+      throw new Error(result.error);
     }
-    
-    const files = result.files
-    console.log('目录路径:', dirPath)
-    console.log('读取到的文件列表:', files)
-    
+
+    const files = result.files;
+    console.log("目录路径:", dirPath);
+    console.log("读取到的文件列表:", files);
+
     if (!files || files.length === 0) {
-      throw new Error('目录为空或无法读取文件列表')
+      throw new Error("目录为空或无法读取文件列表");
     }
-    
+
     // 从目录路径获取目录名（存档文件名与目录名相同）
-    const dirParts = dirPath.split(/[\\\/]/)
-    const dirName = dirParts[dirParts.length - 1]
-    console.log('目录名:', dirName)
-    
+    const dirParts = dirPath.split(/[\\\/]/);
+    const dirName = dirParts[dirParts.length - 1];
+    console.log("目录名:", dirName);
+
     // 检查同名文件是否存在
-    const saveFilePathResult = await window.electronAPI.joinPath(dirPath, dirName)
+    const saveFilePathResult = await window.electronAPI.joinPath(
+      dirPath,
+      dirName
+    );
     if (!saveFilePathResult.success) {
-      throw new Error(saveFilePathResult.error)
+      throw new Error(saveFilePathResult.error);
     }
-    const saveFilePath = saveFilePathResult.path
-    
-    const fileExistsResult = await window.electronAPI.fileExists(saveFilePath)
+    const saveFilePath = saveFilePathResult.path;
+
+    const fileExistsResult = await window.electronAPI.fileExists(saveFilePath);
     if (!fileExistsResult.success || !fileExistsResult.exists) {
-      throw new Error(`未找到存档文件: ${dirName}`)
+      throw new Error(`未找到存档文件: ${dirName}`);
     }
-    
-    const isFileResult = await window.electronAPI.isFile(saveFilePath)
+
+    const isFileResult = await window.electronAPI.isFile(saveFilePath);
     if (!isFileResult.success || !isFileResult.isFile) {
-      throw new Error(`${dirName} 不是一个有效的文件`)
+      throw new Error(`${dirName} 不是一个有效的文件`);
     }
-    
-    const saveFile = dirName
-    
-    const saveInfoPathResult = await window.electronAPI.joinPath(dirPath, 'SaveGameInfo')
+
+    const saveFile = dirName;
+
+    const saveInfoPathResult = await window.electronAPI.joinPath(
+      dirPath,
+      "SaveGameInfo"
+    );
     if (!saveInfoPathResult.success) {
-      throw new Error(saveInfoPathResult.error)
+      throw new Error(saveInfoPathResult.error);
     }
-    const saveInfoPath = saveInfoPathResult.path
-    
+    const saveInfoPath = saveInfoPathResult.path;
+
     // 读取主存档
-    const saveResult = await window.electronAPI.readFile(saveFilePath)
+    const saveResult = await window.electronAPI.readFile(saveFilePath);
     if (!saveResult.success) {
-      throw new Error(`读取存档文件失败: ${saveResult.error}`)
+      throw new Error(`读取存档文件失败: ${saveResult.error}`);
     }
-    
+
     const response = {
       saveFile: {
         name: saveFile,
         path: saveFilePath,
-        content: saveResult.content
+        content: saveResult.content,
       },
       saveInfo: null,
-      dirPath
-    }
-    
+      dirPath,
+    };
+
     // 尝试读取SaveGameInfo
-    const saveInfoExists = await window.electronAPI.fileExists(saveInfoPath)
+    const saveInfoExists = await window.electronAPI.fileExists(saveInfoPath);
     if (saveInfoExists.exists) {
-      const saveInfoResult = await window.electronAPI.readFile(saveInfoPath)
+      const saveInfoResult = await window.electronAPI.readFile(saveInfoPath);
       if (saveInfoResult.success) {
         response.saveInfo = {
-          name: 'SaveGameInfo',
+          name: "SaveGameInfo",
           path: saveInfoPath,
-          content: saveInfoResult.content
-        }
+          content: saveInfoResult.content,
+        };
       }
     }
-    
-    return response
+
+    return response;
   } catch (error) {
-    throw new Error(`加载存档失败: ${error.message}`)
+    throw new Error(`加载存档失败: ${error.message}`);
   }
 }
 
@@ -182,15 +195,15 @@ export async function loadSaveFromDirectory(dirPath) {
  */
 export async function saveFileDirectly(filePath, content) {
   if (!isElectron()) {
-    throw new Error('此功能仅在Electron环境中可用')
+    throw new Error("此功能仅在Electron环境中可用");
   }
-  
+
   try {
-    const result = await window.electronAPI.saveFile(filePath, content)
+    const result = await window.electronAPI.saveFile(filePath, content);
     if (!result.success) {
-      throw new Error(result.error)
+      throw new Error(result.error);
     }
   } catch (error) {
-    throw new Error(`保存文件失败: ${error.message}`)
+    throw new Error(`保存文件失败: ${error.message}`);
   }
 }
