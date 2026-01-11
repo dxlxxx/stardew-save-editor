@@ -361,6 +361,13 @@ const handleMigrateHost = async (farmhandIndex) => {
         <p><strong>注意：</strong> 迁移前务必<strong style="color: #f56c6c;">备份原存档</strong>！</p>
       </el-alert>
     </div>
+    <p class="footer-credit">
+      由玩家 dxlxxx 和 okarin 制作｜
+      项目地址：
+      <a href="https://github.com/dxlxxx/stardew-save-editor" target="_blank" rel="noopener">
+        https://github.com/dxlxxx/stardew-save-editor
+      </a>
+    </p>
   </div>
 </template>
 
@@ -370,6 +377,8 @@ const handleMigrateHost = async (farmhandIndex) => {
   margin: 0 auto;
   padding: 40px 20px;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
@@ -501,6 +510,22 @@ const handleMigrateHost = async (farmhandIndex) => {
 .footer li {
   margin: 4px 0;
   line-height: 1.6;
+}
+
+.footer-credit {
+  margin-top: auto;
+  font-size: 12px;
+  color: #ffffff;
+  text-align: center;
+}
+
+.footer-credit a {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.footer-credit a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 768px) {
