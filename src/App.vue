@@ -180,6 +180,7 @@ const handleMigrateHost = async (farmhandIndex) => {
         confirmButtonText: '确定迁移',
         cancelButtonText: '取消',
         type: 'warning',
+        customClass: 'stardew-messagebox',
       }
     )
     
@@ -234,7 +235,7 @@ const handleMigrateHost = async (farmhandIndex) => {
         })
       } else {
         ElMessage.success({
-          message: '主机迁移成功！主存档已下载，请替换原文件。⚠️ 建议同时上传并修改SaveGameInfo文件',
+          message: '主机迁移成功！主存档已下载，请替换原文件。',
           duration: 6000
         })
       }
@@ -344,23 +345,29 @@ const handleMigrateHost = async (farmhandIndex) => {
     </div>
 
     <div class="footer">
-      <span><p >使用说明：</p></span>
+      <span><p><strong>使用说明：</strong></p></span>
       <el-alert type="info" :closable="false">
         <ol v-if="currentEnvironment === 'electron'">
           <li>点击"选择存档目录"按钮，选择存档所在的文件夹</li>
           <li>程序会自动读取目录中的主存档和SaveGameInfo文件</li>
-          <li>在农场工人列表中选择要设为主机的玩家，点击"设为主机"</li>
-          <li>修改后的文件会<strong>自动覆盖</strong>原文件</li>
-          <li>⚠️<strong>修改前务必备份原存档！</strong></li>
+          <li>在玩家列表中选择要设为主机的玩家，点击"设为主机"</li>
+          <li>迁移后的文件会<strong>自动覆盖</strong>原文件</li>
         </ol>
         <ol v-else>
           <li>上传 <b>主存档文件</b> 和 <b>SaveGameInfo</b> 文件（存档位置详见：<a href="https://zh.stardewvalleywiki.com/%E5%AD%98%E6%A1%A3#.E6.B8.B8.E6.88.8F.E5.AD.98.E6.A1.A3.E4.BD.8D.E7.BD.AE">游戏中存档位置</a>）</li>
           <li>在玩家列表中选择要设为主机的玩家，点击 "<b>设为主机</b>" </li>
           <li>下载修改后的文件，替换原存档文件</li>
         </ol>
-        <p>⚠️ <strong>迁移前务必备份原存档！</strong></p>
+        <p><strong>注意：</strong> 迁移前务必<strong style="color: #f56c6c;">备份原存档</strong>！</p>
       </el-alert>
     </div>
+    <p class="footer-credit">
+      由玩家 dxlxxx 和 okarin 制作｜
+      项目地址：
+      <a href="https://github.com/dxlxxx/stardew-save-editor" target="_blank" rel="noopener">
+        https://github.com/dxlxxx/stardew-save-editor
+      </a>
+    </p>
   </div>
 </template>
 
@@ -370,6 +377,8 @@ const handleMigrateHost = async (farmhandIndex) => {
   margin: 0 auto;
   padding: 40px 20px;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
@@ -501,5 +510,127 @@ const handleMigrateHost = async (farmhandIndex) => {
 .footer li {
   margin: 4px 0;
   line-height: 1.6;
+}
+
+.footer-credit {
+  margin-top: auto;
+  font-size: 12px;
+  color: #ffffff;
+  text-align: center;
+}
+
+.footer-credit a {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.footer-credit a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    padding: 24px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .content :deep(.el-row) {
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+
+  .content :deep(.el-col) {
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+
+  .content-frame {
+    width: 100%;
+    margin: 0 auto 16px;
+  }
+
+  .footer {
+    width: 95%;
+    margin: auto 0;
+  }
+
+  .header-logo {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .title-box {
+    max-width: 100%;
+  }
+}
+
+</style>
+
+<style>
+.stardew-messagebox {
+  background: #f8d79a;
+  border: 18px solid transparent;
+  border-image: url("./assets/image/woodenboxborder.png") 24 fill stretch;
+  box-shadow: 0 12px 24px rgba(60, 31, 12, 0.35);
+  padding: 16px 18px 14px;
+  border-radius: 15px;
+}
+
+.stardew-messagebox .el-message-box__header {
+  padding: 0 0 6px;
+}
+
+.stardew-messagebox .el-message-box__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #6b2f12;
+}
+
+.stardew-messagebox .el-message-box__content {
+  padding: 6px 0 12px;
+}
+
+.stardew-messagebox .el-message-box__message {
+  font-size: 15px;
+  color: #5a3b1e;
+  line-height: 1.6;
+}
+
+.stardew-messagebox .el-message-box__status {
+  color: #c06b2b;
+}
+
+.stardew-messagebox .el-message-box__btns {
+  padding-top: 6px;
+}
+
+.stardew-messagebox .el-message-box__btns .el-button {
+  border: 1.5px solid #c7913f;
+  background: #f4e3a3;
+  color: #6b2f12;
+}
+
+.stardew-messagebox .el-message-box__btns .el-button--primary {
+  background: #c7832d;
+  border-color: #9a5a2a;
+  color: #fff6d4;
+}
+
+.stardew-messagebox .el-message-box__headerbtn .el-message-box__close {
+  color: #7c4a1f;
 }
 </style>

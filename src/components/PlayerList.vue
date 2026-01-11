@@ -11,6 +11,7 @@
           <div class="row-title">
             <strong>{{ playersInfo.host.name }}</strong>
             <span class="role-tag">主机</span>
+            <img class="meta-icon meta-icon--host" :src="farmComputer" alt="host" />
           </div>
           <div class="row-sub">
             第 {{ playersInfo.host.yearForSaveGame }} 年 {{ formatSeason(playersInfo.host.seasonForSaveGame) }} {{ playersInfo.host.dayOfMonthForSaveGame }} 日
@@ -81,6 +82,7 @@
 import goldIcon from '../assets/image/Gold.png'
 import timeIcon from '../assets/image/Time_Icon.png'
 import playerIcon from '../assets/image/The_Player_Icon.png'
+import farmComputer from '../assets/image/Farm_Computer.png'
 
 const props = defineProps({
   playersInfo: {
@@ -224,6 +226,11 @@ const handleMigrate = (index) => {
   image-rendering: pixelated;
 }
 
+.meta-icon--host {
+  width: 24px;
+  height: 34px;
+}
+
 .meta-value {
   font-size: 15px;
 }
@@ -255,5 +262,15 @@ const handleMigrate = (index) => {
 
 .button-wrap {
   display: inline-block;
+}
+
+@media (max-width: 768px) {
+  .row-meta {
+    gap: 8px;
+  }
+
+  .row-meta .meta-item {
+    display: none;
+  }
 }
 </style>
