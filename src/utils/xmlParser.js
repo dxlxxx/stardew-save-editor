@@ -5,6 +5,7 @@ const parserOptions = {
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   textNodeName: "#text",
+  parseTagValue: false,
   parseAttributeValue: false,
   trimValues: true,
   processEntities: false,
@@ -135,7 +136,7 @@ export function fixNullableFields(xmlContent) {
     // 匹配 <field></field> 或 <field />（没有属性的自闭合标签）
     const emptyTagPattern = new RegExp(
       `<${field}\\s*></${field}>|<${field}\\s*/>`,
-      "g"
+      "g",
     );
     fixedXml = fixedXml.replace(emptyTagPattern, `<${field} xsi:nil="true" />`);
   }
@@ -179,11 +180,11 @@ export function extractPlayersInfo(saveData) {
 
       farmhandArray.forEach((farmhand, index) => {
         // 过滤掉空数据或没有名字的玩家（离线玩家槽位）
-        if (farmhand && farmhand.name && typeof farmhand.name === "string") {
+        if (farmhand && farmhand.name != null) {
           farmhands.push({
             type: "farmhand",
             index,
-            name: farmhand.name,
+            name: String(farmhand.name),
             farmName: farmhand.farmName,
             uniqueMultiplayerID: farmhand.UniqueMultiplayerID,
             money: farmhand.money,
@@ -263,14 +264,82 @@ export function migrateHost(saveData, farmhandIndex) {
     currentHost.eventsSeen = targetFarmhand.eventsSeen;
     targetFarmhand.eventsSeen = tempEventsSeen;
 
-    // 5. 交换邮件记录（解决矿车、巴士、桥梁等基础设施访问问题）
-    const tempMailReceived = currentHost.mailReceived;
-    currentHost.mailReceived = targetFarmhand.mailReceived;
-    targetFarmhand.mailReceived = tempMailReceived;
+    // 5. 合并邮件记录（解决矿车、巴士、桥梁等基础设施访问问题，同时避免丢邮件）
+    function normalizeMailReceived(mailReceived) {
+      if (!mailReceived) return [];
+
+      let items = [];
+      if (Array.isArray(mailReceived)) {
+        items = mailReceived;
+      } else if (typeof mailReceived === "object") {
+        if (mailReceived.item != null) {
+          items = Array.isArray(mailReceived.item)
+            ? mailReceived.item
+            : [mailReceived.item];
+        } else if (mailReceived.string != null) {
+          items = Array.isArray(mailReceived.string)
+            ? mailReceived.string
+            : [mailReceived.string];
+        } else if (mailReceived["#text"] != null) {
+          items = [mailReceived["#text"]];
+        } else {
+          items = [mailReceived];
+        }
+      } else {
+        items = [mailReceived];
+      }
+
+      // Normalize to string values only
+      return items
+        .map((item) => {
+          if (item == null) return null;
+          if (typeof item === "string") return item;
+          if (typeof item === "number" || typeof item === "boolean") {
+            return String(item);
+          }
+          if (typeof item === "object" && item["#text"] != null) {
+            return String(item["#text"]);
+          }
+          return null;
+        })
+        .filter((item) => item && item.length > 0);
+    }
+
+    function buildMailReceived(uniqueItems, originalShape) {
+      const items = uniqueItems.filter((item) => item && item.length > 0);
+      const resultItems = items.length === 1 ? items[0] : items;
+
+      // Preserve the typical Stardew Save shape: { item: [...] }
+      if (
+        originalShape &&
+        typeof originalShape === "object" &&
+        !Array.isArray(originalShape)
+      ) {
+        if (originalShape.string != null) return { string: resultItems };
+        return { item: resultItems };
+      }
+      if (Array.isArray(originalShape)) return items;
+      // Default to object shape for Stardew saves
+      return { string: resultItems };
+    }
+
+    const hostMailItems = normalizeMailReceived(currentHost.mailReceived);
+    const farmhandMailItems = normalizeMailReceived(
+      targetFarmhand.mailReceived,
+    );
+    const mailUnion = Array.from(
+      new Set([...hostMailItems, ...farmhandMailItems]),
+    );
+    // 将“旧主机 + 新主机”的邮件并集赋给新主机，旧主机不变
+    targetFarmhand.mailReceived = buildMailReceived(
+      mailUnion,
+      targetFarmhand.mailReceived,
+    );
+    console.log("合并后的新主机邮件数量:", mailUnion.length);
 
     // 交换玩家数据
     // 6. 将当前主机降级为农场工人
-    
+
     // 如果原本是单个对象（非数组），需要直接修改 gameSave.farmhands.Farmer
     // 否则修改 farmhandArray 即可（因为它与 farmhandsData 是同一引用）
     if (Array.isArray(farmhandsData)) {
@@ -386,7 +455,7 @@ export function replaceFarmhandReferences(saveData, oldHostId, newHostId) {
             // 检查farmhandReference值是否为新主机ID
             if (obj[key] === newHostId) {
               console.log(
-                `  找到farmhandReference: ${newHostId}，替换为: ${oldHostId}`
+                `  找到farmhandReference: ${newHostId}，替换为: ${oldHostId}`,
               );
               obj[key] = oldHostId;
               replacementCount++;
